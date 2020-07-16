@@ -32,10 +32,15 @@
     name: '{{ item.key }}'
     state: present
     cluster: '{{ cluster }}'
-    size: '{{ item.value.size | default(omit) if item.value.type == "replicated" else omit }}'
-    pg_num: '{{ item.value.pg_num | default(omit) }}'
-    pool_type: '{{ item.value.type == "ec" | ternary("erasure", "replicated") }}'
+    pg_num: '{{ item.value.pg_num | default(osd_pool_default_pg_num) if not item.value.pg_autoscale_mode | default(False) | bool else 16 }}'
+    pgp_num: '{{ item.value.pgp_num | default(item.value.pg_num) | default(osd_pool_default_pg_num) if not item.value.pg_autoscale_mode | default(False) | bool else omit }}'
+    size: '{{ item.value.size | default(omit) }}'
+    min_size: '{{ item.value.min_size | default(omit) }}'
+    pool_type: '{{ (item.value.type == "ec") | ternary("erasure", "replicated") }}'
+    rule_name: '{{ item.value.rule_name | default(omit) }}'
     erasure_profile: '{{ item.value.ec_profile | default(omit) }}'
-    application: 'rgw'
+    pg_autoscale_mode: '{{ item.value.pg_autoscale_mode | default(omit) }}'
+    target_size_ratio: '{{ item.value.target_size_ratio | default(omit) }}'
+    application: '{{ item.value.application | default("rgw") }}'
   loop: "{{ rgw_create_pools | dict2items }}"
   delegate_to: "{{ groups[mon_group_name][0] }}"
