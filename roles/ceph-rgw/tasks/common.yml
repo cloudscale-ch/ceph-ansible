@@ -8,29 +8,25 @@
     mode: "{{ ceph_directories_mode }}"
   with_items: "{{ rbd_client_admin_socket_path }}"
 
-- name: get keys from monitors
-  command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} auth get {{ item.name }}"
-  register: _rgw_keys
-  with_items:
-    - { name: "client.bootstrap-rgw", path: "/var/lib/ceph/bootstrap-rgw/{{ cluster }}.keyring", copy_key: true }
-    - { name: "client.admin", path: "/etc/ceph/{{ cluster }}.client.admin.keyring", copy_key: "{{ copy_admin_key }}" }
+- name: get admin key from monitors
+  command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} auth get client.admin"
+  register: _rgw_admin_key
   delegate_to: "{{ groups.get(mon_group_name)[0] }}"
   run_once: true
   when:
     - cephx | bool
-    - item.copy_key | bool
+    - copy_admin_key | bool
 
-- name: copy ceph key(s) if needed
+- name: copy ceph admin key if needed
   copy:
-    dest: "{{ item.item.path }}"
-    content: "{{ item.stdout + '\n' }}"
+    dest: "/etc/ceph/{{ cluster }}.client.admin.keyring"
+    content: "{{ _rgw_admin_key.stdout + '\n' }}"
     owner: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
     group: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
     mode: "{{ ceph_keyring_permissions }}"
-  with_items: "{{ _rgw_keys.results }}"
   when:
     - cephx | bool
-    - item.item.copy_key | bool
+    - copy_admin_key | bool
 
 - name: copy SSL certificate & key data to certificate path
   copy:
