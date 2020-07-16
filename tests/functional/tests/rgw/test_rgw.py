@@ -25,8 +25,8 @@ class TestRGWs(object):
     def test_rgw_is_up(self, node, setup, ceph_status):
         hostname = node["vars"]["inventory_hostname"]
         cluster = setup["cluster_name"]
-        name = "client.bootstrap-rgw"
-        output = ceph_status(f'/var/lib/ceph/bootstrap-rgw/{cluster}.keyring', name=name)
+        name = "client.admin"
+        output = ceph_status(f'/etc/ceph/{{ cluster }}.client.admin.keyring', name=name)
         keys = list(json.loads(
             output)["servicemap"]["services"]["rgw"]["daemons"].keys())
         keys.remove('summary')
