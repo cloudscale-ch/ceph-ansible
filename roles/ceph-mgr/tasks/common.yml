@@ -57,6 +57,8 @@
 
     - name: get keys from monitors
       command: "{{ _container_exec_cmd | default('') }} ceph --cluster {{ cluster }} auth get {{ item.name }}"
+      changed_when: false
+      check_mode: false
       register: _mgr_keys
       with_items: "{{ _mgr_keys }}"
       delegate_to: "{{ groups[mon_group_name][0] if running_mon is undefined else running_mon }}"

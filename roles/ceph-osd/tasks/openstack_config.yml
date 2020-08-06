@@ -44,6 +44,8 @@
       with_items: "{{ openstack_keys }}"
       run_once: true
       delegate_to: "{{ groups.get(mon_group_name)[0] }}"
+      check_mode: False
+      changed_when: False
 
     - name: copy ceph key(s) if needed
       copy:
