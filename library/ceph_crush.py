@@ -139,11 +139,16 @@ def create_and_move_buckets_list(cluster, location, containerized=None):
     return cmd_list
 
 
-def exec_commands(module, cmd_list):
+def exec_commands(module, cmd_list, modifying=True):
     '''
     Creates Ceph commands
     '''
     for cmd in cmd_list:
+        if module.check_mode and modifying:
+            # Only echo the command without executing it in check_mode if the
+            # command is marked as "modifying".
+            cmd.insert(0, 'echo')
+
         rc, out, err = module.run_command(cmd)
     return rc, cmd, out, err
 
@@ -174,9 +179,6 @@ def run_module():
         end='',
         delta='',
     )
-
-    if module.check_mode:
-        return result
 
     startd = datetime.datetime.now()
 
