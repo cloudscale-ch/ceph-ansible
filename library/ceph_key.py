@@ -426,12 +426,17 @@ def list_keys(cluster, user, user_key, container_image=None):
     return cmd_list
 
 
-def exec_commands(module, cmd_list):
+def exec_commands(module, cmd_list, modifying=True):
     '''
     Execute command(s)
     '''
 
     for cmd in cmd_list:
+        if module.check_mode and modifying:
+            # Only echo the command without executing it in check_mode if the
+            # command is marked as "modifying".
+            cmd.insert(0, 'echo')
+
         rc, out, err = module.run_command(cmd)
         if rc != 0:
             return rc, cmd, out, err
@@ -534,9 +539,6 @@ def run_module():
         delta='',
     )
 
-    if module.check_mode:
-        return result
-
     startd = datetime.datetime.now()
 
     # will return either the image name or None
@@ -572,7 +574,7 @@ def run_module():
                 output_format = "json"
                 _info_key = []
                 rc, cmd, out, err = exec_commands(
-                    module, info_key(cluster, name, user, user_key, output_format, container_image))  # noqa E501
+                    module, info_key(cluster, name, user, user_key, output_format, container_image), modifying=False)  # noqa E501
                 key_exist = rc
                 if key_exist == 0:
                     _info_key = json.loads(out)
@@ -593,7 +595,8 @@ def run_module():
 
                         result["stdout"] = "{0} already exists and doesn't need to be updated.".format(name) # noqa E501
                         result["rc"] = 0
-                        module.set_fs_attributes_if_different(file_args, False)
+                        if not module.check_mode:
+                            module.set_fs_attributes_if_different(file_args, False)
                         module.exit_json(**result)
             else:
                 if os.path.isfile(file_path) and not secret or not caps:
@@ -618,7 +621,8 @@ def run_module():
                 module.exit_json(**result)
             changed = True
 
-        module.set_fs_attributes_if_different(file_args, False)
+        if not module.check_mode:
+            module.set_fs_attributes_if_different(file_args, False)
 
     elif state == "absent":
         rc, cmd, out, err = exec_commands(
@@ -630,7 +634,7 @@ def run_module():
         user_key = os.path.join("/etc/ceph/", keyring_filename)
         output_format = "json"
         rc, cmd, out, err = exec_commands(
-            module, info_key(cluster, name, user, user_key, output_format, container_image))  # noqa E501
+            module, info_key(cluster, name, user, user_key, output_format, container_image), modifying=False)  # noqa E501
         if rc != 0:
             result["stdout"] = "skipped, since {0} does not exist".format(name)
             result['rc'] = 0
@@ -641,7 +645,7 @@ def run_module():
         keyring_filename = cluster + '.' + user + '.keyring'
         user_key = os.path.join("/etc/ceph/", keyring_filename)
         rc, cmd, out, err = exec_commands(
-            module, list_keys(cluster, user, user_key, container_image))
+            module, list_keys(cluster, user, user_key, container_image), modifying=False)
 
     elif state == "fetch_initial_keys":
         hostname = socket.gethostname().split('.', 1)[0]
@@ -649,7 +653,7 @@ def run_module():
         keyring_filename = cluster + "-" + hostname + "/keyring"
         user_key = os.path.join("/var/lib/ceph/mon/", keyring_filename)
         rc, cmd, out, err = exec_commands(
-            module, list_keys(cluster, user, user_key, container_image))
+            module, list_keys(cluster, user, user_key, container_image), modifying=False)
         if rc != 0:
             result["stdout"] = "failed to retrieve ceph keys".format(name)
             result["sdterr"] = err
@@ -678,11 +682,12 @@ def run_module():
             # we use info_cmd[0] because info_cmd is an array made of an array
             info_cmd[0].extend(extra_args)
             rc, cmd, out, err = exec_commands(
-                module, info_cmd)  # noqa E501
+                module, info_cmd, modifying=False)  # noqa E501
 
             file_args = module.load_file_common_arguments(module.params)
             file_args['path'] = key_path
-            module.set_fs_attributes_if_different(file_args, False)
+            if not module.check_mode:
+                module.set_fs_attributes_if_different(file_args, False)
     else:
         module.fail_json(
             msg='State must either be "present" or "absent" or "list" or "info" or "fetch_initial_keys".', changed=False, rc=1)  # noqa E501
