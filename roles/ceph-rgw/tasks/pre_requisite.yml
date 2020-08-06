@@ -14,4 +14,7 @@
     group: "ceph"
     mode: "0600"
   with_items: "{{ rgw_instances }}"
-  when: cephx | bool
+  when:
+    - cephx | bool
+    # This fails in check mode if the src does not yet exist
+    - not ansible_check_mode
