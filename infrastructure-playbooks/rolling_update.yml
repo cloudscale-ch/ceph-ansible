@@ -136,6 +136,8 @@
     - block:
         - name: get ceph cluster status
           command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} -s -f json"
+          changed_when: false
+          check_mode: fales
           register: check_cluster_status
           delegate_to: "{{ mon_host }}"
 
@@ -240,6 +242,8 @@
           hostvars[inventory_hostname]['ansible_fqdn'] in (ceph_health_raw.stdout | default('{}') | from_json)["quorum_names"])
       retries: "{{ health_mon_check_retries }}"
       delay: "{{ health_mon_check_delay }}"
+      changed_when: false
+      check_mode: false
       when: not containerized_deployment | bool
 
     - name: container | waiting for the containerized monitor to join the quorum...
@@ -252,6 +256,8 @@
           hostvars[inventory_hostname]['ansible_fqdn'] in (ceph_health_raw.stdout | default('{}') | from_json)["quorum_names"])
       retries: "{{ health_mon_check_retries }}"
       delay: "{{ health_mon_check_delay }}"
+      changed_when: false
+      check_mode: false
       when: containerized_deployment | bool
 
 
@@ -374,6 +380,7 @@
       shell: "if [ -d /var/lib/ceph/osd ] ; then ls /var/lib/ceph/osd | sed 's/.*-//' ; fi"
       register: osd_ids
       changed_when: false
+      check_mode: false
 
     - name: set num_osds
       set_fact:
@@ -409,6 +416,8 @@
       command: "ceph-volume --cluster={{ cluster }} simple scan --force"
       environment:
         CEPH_VOLUME_DEBUG: 1
+      changed_when: false
+      check_mode: false
       when:
         - ceph_release in ["nautilus", "octopus"]
         - not containerized_deployment | bool
@@ -423,11 +432,15 @@
 
     - name: get num_pgs - non container
       command: "{{ container_exec_cmd_update_osd|default('') }} ceph --cluster {{ cluster }} -s --format json"
+      changed_when: false
+      check_mode: false
       register: ceph_pgs
       delegate_to: "{{ groups[mon_group_name][0] }}"
 
     - name: waiting for clean pgs...
       command: "{{ container_exec_cmd_update_osd|default('') }} ceph --cluster {{ cluster }} -s --format json"
+      changed_when: false
+      check_mode: false
       register: ceph_health_post
       until: >
         (((ceph_health_post.stdout | from_json).pgmap.pgs_by_state | length) > 0)
@@ -482,6 +495,7 @@
             - name: wait until only rank 0 is up
               command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} fs get {{ cephfs }} -f json"
               changed_when: false
+              check_mode: false
               register: wait_rank_zero
               retries: 720
               delay: 5
@@ -490,6 +504,7 @@
             - name: get name of remaining active mds
               command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} fs dump -f json"
               changed_when: false
+              check_mode: false
               register: _mds_active_name
 
             - name: set_fact mds_active_name
@@ -533,6 +548,7 @@
             - name: wait until all standbys mds are stopped
               command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} fs dump -f json"
               changed_when: false
+              check_mode: false
               register: wait_standbys_down
               retries: 300
               delay: 5
