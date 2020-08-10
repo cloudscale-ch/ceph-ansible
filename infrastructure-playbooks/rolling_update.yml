@@ -78,7 +78,7 @@
           - '!ohai'
       delegate_to: "{{ item }}"
       delegate_facts: True
-      with_items: "{{ groups['all'] | difference(groups.get('clients', [])) }}"
+      with_items: "{{ groups['ceph'] | difference(groups.get('clients', [])) }}"
       run_once: true
       when: delegate_facts_host | bool
 
@@ -897,7 +897,7 @@
         msgr2_migration: True
 
 - name: upgrade node-exporter
-  hosts: all
+  hosts: ceph
   gather_facts: false
   become: true
   tasks:
