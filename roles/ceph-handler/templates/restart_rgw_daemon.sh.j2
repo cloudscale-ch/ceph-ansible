@@ -12,7 +12,7 @@ else
 fi
 INSTANCES_NAME=({% for i in rgw_instances %}{{ i.instance_name }} {% endfor %})
 HAPROXY_BACKEND=({% for i in rgw_instances %}{{ i.haproxy_backend | default('rgw-backend') }} {% endfor %})
-RGW_IPS=({% for i in rgw_instances %}{{ i.radosgw_address }} {% endfor %})
+RGW_IPS=({% for i in rgw_instances %}{{ i.radosgw_address | first }} {% endfor %})
 RGW_PORTS=({% for i in rgw_instances %}{{ i.radosgw_frontend_port }} {% endfor %})
 RGW_ZONE="{{ rgw_zone }}"
 declare -a DOCKER_EXECS
