@@ -17,23 +17,21 @@
   when: cephx | bool
   delegate_to: '{{ groups[mon_group_name][0] }}'
 
-- name: fetch rados gateway key
-  fetch:
-    src: "/etc/ceph/ceph.client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}.keyring"
-    dest: "{{ fetch_directory }}/{{ fsid }}/etc/ceph/ceph.client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}.keyring"
-    flat: yes
+- name: get rados gateway keys from monitors
+  command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} auth get client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}"
+  register: _rgw_keys
   loop: "{{ rgw_instances }}"
-  when: cephx
   delegate_to: '{{ groups[mon_group_name][0] }}'
+  when: cephx | bool
 
-- name: put rados gateway key
+- name: put rados gateway keys
   copy:
-    src: "{{ fetch_directory }}/{{ fsid }}/etc/ceph/ceph.client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}.keyring"
-    dest: /var/lib/ceph/radosgw/{{ cluster }}-rgw.{{ ansible_hostname }}.{{ item.instance_name }}/keyring
+    dest: /var/lib/ceph/radosgw/{{ cluster }}-rgw.{{ ansible_hostname }}.{{ item.item.instance_name }}/keyring
+    content: '{{ item.stdout + "\n" }}'
     owner: "ceph"
     group: "ceph"
     mode: "0600"
-  loop: "{{ rgw_instances }}"
+  loop: "{{ _rgw_keys }}"
   when:
     - cephx | bool
     # This fails in check mode if the src does not yet exist
