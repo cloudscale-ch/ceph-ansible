@@ -342,7 +342,7 @@ def compare_pool_config(user_pool_config, running_pool_details):
     delta = {}
     filter_keys = [ 'pg_num', 'pg_placement_num', 'size', 'pg_autoscale_mode']
     for key in filter_keys:
-        if str(running_pool_details[key]) != user_pool_config[key]['value']:
+        if key in running_pool_details and str(running_pool_details[key]) != user_pool_config[key]['value']:
             delta[key] = user_pool_config[key]
 
     if str(running_pool_details['options'].get('target_size_ratio')) != user_pool_config['target_size_ratio']['value'] and user_pool_config['target_size_ratio']['value'] != None:
