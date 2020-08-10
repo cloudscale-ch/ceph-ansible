@@ -239,10 +239,15 @@ def build_cmd(action, container_image, cluster='ceph', binary='ceph-volume'):
     return cmd
 
 
-def exec_command(module, cmd):
+def exec_command(module, cmd, modifying=True):
     '''
     Execute command
     '''
+
+    if module.check_mode and modifying:
+        # Only echo the command without executing it in check_mode if the
+        # command is marked as "modifying".
+        cmd.insert(0, 'echo')
 
     rc, out, err = module.run_command(cmd)
     return rc, cmd, out, err
@@ -477,7 +482,7 @@ def is_lv(module, vg, lv, container_image):
 
     cmd = build_cmd(args, container_image, binary='lvs')
 
-    rc, cmd, out, err = exec_command(module, cmd)
+    rc, cmd, out, err = exec_command(module, cmd, modifying=False)
 
     result = json.loads(out)['report'][0]['lv']
     if rc == 0 and len(result) > 0:
@@ -580,9 +585,6 @@ def run_module():
         delta='',
     )
 
-    if module.check_mode:
-        return result
-
     # start execution
     startd = datetime.datetime.now()
 
@@ -598,7 +600,7 @@ def run_module():
     if action == 'create' or action == 'prepare':
         # First test if the device has Ceph LVM Metadata
         rc, cmd, out, err = exec_command(
-            module, list_osd(module, container_image))
+            module, list_osd(module, container_image), modifying=False)
 
         # list_osd returns a dict, if the dict is empty this means
         # we can not check the return code since it's not consistent
@@ -663,12 +665,14 @@ def run_module():
     elif action == 'list':
         # List Ceph LVM Metadata on a device
         rc, cmd, out, err = exec_command(
-            module, list_osd(module, container_image))
+            module, list_osd(module, container_image), modifying=False)
+        changed = False
 
     elif action == 'inventory':
         # List storage device inventory.
         rc, cmd, out, err = exec_command(
-            module, list_storage_inventory(module, container_image))
+            module, list_storage_inventory(module, container_image), modifying=False)
+        changed = False
 
     elif action == 'batch':
         # Batch prepare AND activate OSDs
@@ -687,7 +691,7 @@ def run_module():
         # Run batch --report to see what's going to happen
         # Do not run the batch command if there is nothing to do
         rc, cmd, out, err = exec_command(
-            module, batch_report_cmd)
+            module, batch_report_cmd, modifying=False)
         try:
             report_result = json.loads(out)
         except ValueError:
@@ -733,6 +737,8 @@ def run_module():
                     module, batch(module, container_image))
         else:
             cmd = batch_report_cmd
+            # If only reporting, nothing changed
+            changed = False
 
     else:
         module.fail_json(

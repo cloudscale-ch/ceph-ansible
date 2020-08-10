@@ -2,11 +2,13 @@
 - name: find device used for operating system
   command: findmnt -v -n -T / -o SOURCE
   changed_when: false
+  check_mode: false
   register: root_device
 
 - name: resolve root_device
   command: "readlink -f {{ root_device.stdout }}"
   changed_when: false
+  check_mode: false
   register: _root_device
 
 - name: set_fact root_device
@@ -21,6 +23,7 @@
     - name: resolve devices in lvm_volumes
       command: "readlink -f {{ item.data }}"
       changed_when: false
+      check_mode: false
       register: _lvm_volumes_data_devices
       with_items: "{{ lvm_volumes }}"
       when:
@@ -41,6 +44,7 @@
     - name: resolve devices in devices
       command: "readlink -f {{ item }}"
       changed_when: false
+      check_mode: false
       register: devices_resolved
       with_items: "{{ devices }}"
 

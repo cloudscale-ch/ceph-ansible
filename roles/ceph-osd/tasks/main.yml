@@ -81,6 +81,7 @@
   retries: "{{ nb_retry_wait_osd_up }}"
   delay: "{{ delay_wait_osd_up }}"
   changed_when: false
+  check_mode: false
   delegate_to: "{{ groups[mon_group_name][0] }}"
   until:
     - (wait_for_all_osds_up.stdout | from_json)["osdmap"]["num_osds"] | int > 0

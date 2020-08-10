@@ -206,10 +206,15 @@ def generate_ceph_cmd(cluster, args, user, user_key, container_image=None):
     return cmd
 
 
-def exec_commands(module, cmd):
+def exec_commands(module, cmd, modifying=True):
     '''
     Execute command(s)
     '''
+
+    if module.check_mode and modifying:
+        # Only echo the command without executing it in check_mode if the
+        # command is marked as "modifying".
+        cmd.insert(0, 'echo')
 
     rc, out, err = module.run_command(cmd)
 
@@ -255,7 +260,7 @@ def get_default_running_config(module, cluster, user, user_key, output_format='j
     default_running_values = {}
 
     for param in params:
-        rc, cmd, out, err = exec_commands(module, generate_get_config_cmd(param, cluster, user, user_key, container_image=container_image))
+        rc, cmd, out, err = exec_commands(module, generate_get_config_cmd(param, cluster, user, user_key, container_image=container_image), modifying=False)
 
         if rc == 0:
             default_running_values[param] = out.strip()
@@ -312,12 +317,12 @@ def get_pool_details(module, cluster, name, user, user_key, output_format='json'
 
     cmd = generate_ceph_cmd(cluster=cluster, args=args, user=user, user_key=user_key, container_image=container_image)
 
-    rc, cmd, out, err = exec_commands(module, cmd)
+    rc, cmd, out, err = exec_commands(module, cmd, modifying=False)
 
     if rc == 0:
         out = [p for p in json.loads(out.strip()) if p['pool_name'] == name][0]
 
-    _rc, _cmd, application_pool, _err = exec_commands(module, get_application_pool(cluster, name, user, user_key, container_image=container_image))
+    _rc, _cmd, application_pool, _err = exec_commands(module, get_application_pool(cluster, name, user, user_key, container_image=container_image), modifying=False)
 
     application = list(json.loads(application_pool.strip()).keys())
 
@@ -526,17 +531,6 @@ def run_module():
         'expected_num_objects': { 'value': expected_num_objects }
     }
 
-    if module.check_mode:
-        return dict(
-            changed=False,
-            stdout='',
-            stderr='',
-            rc='',
-            start='',
-            end='',
-            delta='',
-        )
-
     startd = datetime.datetime.now()
     changed = False
 
@@ -574,7 +568,7 @@ def run_module():
                     user_pool_config[k] = {'value': default_running_ceph_config[v['conf_name']], 'cli_set_opt': v['cli_set_opt']}
                 else:
                     user_pool_config[k] = {'value': module.params.get(k), 'cli_set_opt': v['cli_set_opt']}
-            rc, cmd, out, err = exec_commands(module, check_pool_exist(cluster, name, user, user_key, container_image=container_image))
+            rc, cmd, out, err = exec_commands(module, check_pool_exist(cluster, name, user, user_key, container_image=container_image), modifying=False)
             if rc == 0:
                 running_pool_details = get_pool_details(module, cluster, name, user, user_key, container_image=container_image)
                 user_pool_config['pg_placement_num'] = { 'value': str(running_pool_details[2]['pg_placement_num']), 'cli_set_opt': 'pgp_num' }
@@ -592,7 +586,7 @@ def run_module():
                 changed = True
 
     elif state == "list":
-        rc, cmd, out, err = exec_commands(module, list_pools(cluster, name, user, user_key, details, container_image=container_image))
+        rc, cmd, out, err = exec_commands(module, list_pools(cluster, name, user, user_key, details, container_image=container_image), modifying=False)
         if rc != 0:
             out = "Couldn't list pool(s) present on the cluster"
 
