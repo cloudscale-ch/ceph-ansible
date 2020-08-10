@@ -1,17 +1,37 @@
 ---
-- name: create rados gateway instance keyring
-  command: ceph --cluster {{ cluster }} --name client.bootstrap-rgw --keyring /var/lib/ceph/bootstrap-rgw/{{ cluster }}.keyring auth get-or-create client.rgw.{{ ansible_hostname }}.{{ item.instance_name }} osd 'allow rwx' mon 'allow rw' -o /var/lib/ceph/radosgw/{{ cluster }}-rgw.{{ ansible_hostname }}.{{ item.instance_name }}/keyring
-  args:
-    creates: /var/lib/ceph/radosgw/{{ cluster }}-rgw.{{ ansible_hostname }}.{{ item.instance_name }}/keyring
-  changed_when: false
-  with_items: "{{ rgw_instances }}"
+- name: create rados gateway instance key
+  ceph_key:
+    name: "client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}"
+    state: present
+    # The value below must be valid JSON starting with "{" to be automatically
+    # converted to a dict by Ansible
+    caps: >-
+      {% if rgw_create_pools -%}
+      {"mon": "allow r",
+       "osd": "{% for name in rgw_create_pools %}allow rwx pool={{ name }}{% if not loop.last %}, {% endif %}{% endfor %}"}
+      {% else -%}
+      {"osd": "allow rwx",
+       "mon": "allow rw"}
+      {% endif %}
+  loop: "{{ rgw_instances }}"
   when: cephx | bool
+  delegate_to: '{{ groups[mon_group_name][0] }}'
 
-- name: set rados gateway instance key permissions
-  file:
-    path: /var/lib/ceph/radosgw/{{ cluster }}-rgw.{{ ansible_hostname }}.{{ item.instance_name }}/keyring
+- name: fetch rados gateway key
+  fetch:
+    src: "/etc/ceph/ceph.client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}.keyring"
+    dest: "{{ fetch_directory }}/{{ fsid }}/etc/ceph/ceph.client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}.keyring"
+    flat: yes
+  loop: "{{ rgw_instances }}"
+  when: cephx
+  delegate_to: '{{ groups[mon_group_name][0] }}'
+
+- name: put rados gateway key
+  copy:
+    src: "{{ fetch_directory }}/{{ fsid }}/etc/ceph/ceph.client.rgw.{{ ansible_hostname }}.{{ item.instance_name }}.keyring"
+    dest: /var/lib/ceph/radosgw/{{ cluster }}-rgw.{{ ansible_hostname }}.{{ item.instance_name }}/keyring
     owner: "ceph"
     group: "ceph"
     mode: "0600"
-  with_items: "{{ rgw_instances }}"
+  loop: "{{ rgw_instances }}"
   when: cephx | bool
