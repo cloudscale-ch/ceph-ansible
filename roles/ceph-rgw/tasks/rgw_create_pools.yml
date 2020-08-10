@@ -27,45 +27,20 @@
     - item.value.type is defined
     - item.value.type == 'ec'
 
-- name: create ec pools for rgw
-  command: "{{ container_exec_cmd }} ceph --connect-timeout 10 --cluster {{ cluster }} osd pool create {{ item.key }} {{ item.value.pg_num | default(osd_pool_default_pg_num) }} erasure {{ item.value.ec_profile }}"
-  loop: "{{ rgw_create_pools | dict2items }}"
-  delegate_to: "{{ groups[mon_group_name][0] }}"
-  changed_when: false
-  when:
-    - item.value.type is defined
-    - item.value.type == 'ec'
-
-- name: create replicated pools for rgw
-  command: "{{ container_exec_cmd }} ceph --connect-timeout 10 --cluster {{ cluster }} osd pool create {{ item.key }} {{ item.value.pg_num | default(osd_pool_default_pg_num) }} replicated"
-  changed_when: false
-  register: result
-  retries: 60
-  delay: 3
-  until: result is succeeded
-  loop: "{{ rgw_create_pools | dict2items }}"
-  delegate_to: "{{ groups[mon_group_name][0] }}"
-  when: item.value.type is not defined or item.value.type == 'replicated'
-
-- name: customize replicated pool size
-  command: "{{ container_exec_cmd }} ceph --connect-timeout 10 --cluster {{ cluster }} osd pool set {{ item.key }} size {{ item.value.size | default(osd_pool_default_size) }} {{ '--yes-i-really-mean-it' if item.value.size | default(osd_pool_default_size) | int == 1 else '' }}"
-  register: result
-  retries: 60
-  delay: 3
-  until: result is succeeded
-  loop: "{{ rgw_create_pools | dict2items }}"
-  delegate_to: "{{ groups[mon_group_name][0] }}"
-  changed_when: false
-  when:
-    - item.value.type is not defined or item.value.type == 'replicated'
-    - item.value.size | default(osd_pool_default_size) != ceph_osd_pool_default_size
-
-- name: set the rgw_create_pools pools application to rgw
-  command: "{{ container_exec_cmd }} ceph --connect-timeout 10 --cluster {{ cluster }} osd pool application enable {{ item.key }} rgw"
-  register: result
-  retries: 60
-  delay: 3
-  until: result is succeeded
-  changed_when: false
+- name: create pools for rgw
+  ceph_pool:
+    name: '{{ item.key }}'
+    state: present
+    cluster: '{{ cluster }}'
+    pg_num: '{{ item.value.pg_num | default(osd_pool_default_pg_num) if not item.value.pg_autoscale_mode | default(False) | bool else 16 }}'
+    pgp_num: '{{ item.value.pgp_num | default(item.value.pg_num) | default(osd_pool_default_pg_num) if not item.value.pg_autoscale_mode | default(False) | bool else omit }}'
+    size: '{{ item.value.size | default(omit) }}'
+    min_size: '{{ item.value.min_size | default(omit) }}'
+    pool_type: '{{ (item.value.type == "ec") | ternary("erasure", "replicated") }}'
+    rule_name: '{{ item.value.rule_name | default(omit) }}'
+    erasure_profile: '{{ item.value.ec_profile | default(omit) }}'
+    pg_autoscale_mode: '{{ item.value.pg_autoscale_mode | default(omit) }}'
+    target_size_ratio: '{{ item.value.target_size_ratio | default(omit) }}'
+    application: '{{ item.value.application | default("rgw") }}'
   loop: "{{ rgw_create_pools | dict2items }}"
   delegate_to: "{{ groups[mon_group_name][0] }}"
