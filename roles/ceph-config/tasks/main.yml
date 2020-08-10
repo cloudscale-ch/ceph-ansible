@@ -125,15 +125,14 @@
   block:
     - name: Render rgw configs
       vars:
-        _rgw_binding_socket: "{{ item.radosgw_address | default(_radosgw_address) | string + ':' + item.radosgw_frontend_port | default(radosgw_frontend_port) | string }}"
-        _rgw_beast_endpoint: "{{ 'ssl_' if radosgw_frontend_ssl_certificate else '' }}endpoint={{ _rgw_binding_socket }}"
+        _rgw_beast_endpoint: "{{ item.radosgw_address | default(_radosgw_address) | map('regex_replace', '^(.*)$', radosgw_frontend_ssl_certificate | ternary('ssl_', '') + 'endpoint=\\1:' + item.radosgw_frontend_port | default(radosgw_frontend_port) | string) }}"
         _rgw_beast_ssl_option: "{{ ' ssl_certificate=' + radosgw_frontend_ssl_certificate if radosgw_frontend_ssl_certificate else '' }}"
       ansible.builtin.set_fact:
         _ceph_ansible_rgw_conf: >-
           {{ _ceph_ansible_rgw_conf | default({}) | combine({
               'client.rgw.' + rgw_zone + '.' + ansible_facts['hostname'] + '.' + item.instance_name: {
                 'log_file': '/var/log/ceph/' + cluster + '-rgw-' + rgw_zone + '-' + ansible_facts['hostname'] + '.' + item.instance_name + '.log',
-                'rgw_frontends': 'beast ' + _rgw_beast_endpoint + _rgw_beast_ssl_option,
+                'rgw_frontends': 'beast ' + _rgw_beast_endpoint | join(" ") + _rgw_beast_ssl_option,
               }
           }, recursive=true) }}
       loop: "{{ rgw_instances }}"
