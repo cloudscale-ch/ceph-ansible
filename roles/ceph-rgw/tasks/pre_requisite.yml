@@ -29,11 +29,11 @@
 - name: put rados gateway keys
   copy:
     dest: /var/lib/ceph/radosgw/{{ cluster }}-rgw.{{ ansible_hostname }}.{{ item.item.instance_name }}/keyring
-    content: '{{ item.stdout + "\n" }}'
+    content: "{{ item.stdout }}\n"
     owner: "ceph"
     group: "ceph"
     mode: "0600"
-  loop: "{{ _rgw_keys }}"
+  loop: "{{ _rgw_keys.results }}"
   when:
     - cephx | bool
     # This fails in check mode if the src does not yet exist
