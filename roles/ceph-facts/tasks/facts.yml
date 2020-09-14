@@ -72,6 +72,7 @@
       register: mon_socket
       run_once: true
       with_items: "{{ mon_socket_stat.results }}"
+      delegate_to: '{{ item.item }}'
       when:
         - not containerized_deployment | bool
         - item.rc == 0
