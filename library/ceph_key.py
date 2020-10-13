@@ -586,7 +586,7 @@ def run_module():
                     _caps = _info_key[0]['caps']
                     if secret == _secret and caps == _caps:
                         if not os.path.isfile(file_path):
-                            rc, cmd, out, err = exec_commands(module, get_key(cluster, name, file_path, container_image), modifying=False)  # noqa E501
+                            rc, cmd, out, err = exec_commands(module, get_key(cluster, name, file_path, container_image))  # noqa E501
                             result["rc"] = rc
                             if rc != 0:
                                 result["stdout"] = "Couldn't fetch the key {0} at {1}.".format(name, file_path) # noqa E501
@@ -595,7 +595,8 @@ def run_module():
 
                         result["stdout"] = "{0} already exists and doesn't need to be updated.".format(name) # noqa E501
                         result["rc"] = 0
-                        module.set_fs_attributes_if_different(file_args, False)
+                        if not module.check_mode:
+                            module.set_fs_attributes_if_different(file_args, False)
                         module.exit_json(**result)
             else:
                 if os.path.isfile(file_path) and not secret or not caps:
@@ -620,7 +621,8 @@ def run_module():
                 module.exit_json(**result)
             changed = True
 
-        module.set_fs_attributes_if_different(file_args, False)
+        if not module.check_mode:
+            module.set_fs_attributes_if_different(file_args, False)
 
     elif state == "absent":
         rc, cmd, out, err = exec_commands(
@@ -684,7 +686,8 @@ def run_module():
 
             file_args = module.load_file_common_arguments(module.params)
             file_args['path'] = key_path
-            module.set_fs_attributes_if_different(file_args, False)
+            if not module.check_mode:
+                module.set_fs_attributes_if_different(file_args, False)
     else:
         module.fail_json(
             msg='State must either be "present" or "absent" or "list" or "info" or "fetch_initial_keys".', changed=False, rc=1)  # noqa E501
