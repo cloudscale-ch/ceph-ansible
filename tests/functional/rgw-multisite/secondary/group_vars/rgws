@@ -1,4 +1,7 @@
 ---
+# Enable Multisite support
+rgw_multisite: true
+rgw_multisite_proto: http
 rgw_create_pools:
   .rgw.root:
     pg_num: 16
@@ -21,3 +24,5 @@ rgw_create_pools:
   default.rgw.buckets.non-ec:
     pg_num: 16
     type: replicated
+rgw_override_bucket_index_max_shards: 16
+rgw_bucket_default_quota_max_objects: 1638400
