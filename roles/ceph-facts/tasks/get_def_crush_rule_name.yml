@@ -10,6 +10,7 @@
   register: default_crush_rule_details
   delegate_to: "{{ delegated_node | default(groups[mon_group_name][0]) }}"
   run_once: true
+  check_mode: False
 
 - name: get current default crush rule name
   set_fact:

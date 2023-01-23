@@ -50,6 +50,7 @@
       with_items: "{{ openstack_keys }}"
       delegate_to: "{{ groups.get(mon_group_name)[0] }}"
       no_log: "{{ no_log_on_ceph_key_tasks }}"
+      check_mode: False
 
     - name: copy ceph key(s) if needed
       copy:

@@ -19,6 +19,7 @@
       failed_when: initial_mon_key.rc not in [0, 2]
       no_log: "{{ no_log_on_ceph_key_tasks }}"
       when: running_mon is defined
+      check_mode: False
 
     - name: generate monitor initial keyring
       ceph_key:

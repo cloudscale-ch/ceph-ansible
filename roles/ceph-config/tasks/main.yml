@@ -29,6 +29,8 @@
             cluster: "{{ cluster }}"
             action: "inventory"
           register: rejected_devices
+          check_mode: False
+          changed_when: False
           environment:
             CEPH_VOLUME_DEBUG: "{{ ceph_volume_debug }}"
             CEPH_CONTAINER_IMAGE: "{{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment | bool else None }}"
@@ -56,6 +58,7 @@
             report: true
             action: "batch"
           register: lvm_batch_report
+          check_mode: False
           environment:
             CEPH_VOLUME_DEBUG: "{{ ceph_volume_debug }}"
             CEPH_CONTAINER_IMAGE: "{{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment | bool else None }}"
@@ -83,6 +86,7 @@
       ceph_volume:
         action: "list"
       register: lvm_list
+      check_mode: False
       environment:
         CEPH_VOLUME_DEBUG: "{{ ceph_volume_debug }}"
         CEPH_CONTAINER_IMAGE: "{{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment | bool else None }}"

@@ -15,6 +15,7 @@
     - cephx | bool
     - copy_admin_key | bool
   no_log: "{{ no_log_on_ceph_key_tasks }}"
+  check_mode: False
 
 - name: copy ceph key(s) if needed
   copy:

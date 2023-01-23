@@ -16,6 +16,7 @@
       delegate_to: "{{ groups.get(mon_group_name)[0] }}"
       run_once: true
       no_log: "{{ no_log_on_ceph_key_tasks }}"
+      check_mode: False
 
     - name: ensure /var/lib/ceph/bootstrap-rbd-mirror exists
       file:
@@ -72,6 +73,7 @@
       register: _rbd_mirror_key
       delegate_to: "{{ groups.get(mon_group_name)[0] }}"
       no_log: "{{ no_log_on_ceph_key_tasks }}"
+      check_mode: False
 
     - name: copy ceph key
       copy:
