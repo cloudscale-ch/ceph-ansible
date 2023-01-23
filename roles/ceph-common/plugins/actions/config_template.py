@@ -618,7 +618,7 @@ class ActionModule(ActionBase):
             template_data = to_text(f.read())
 
         self._templar.environment.loader.searchpath = _vars['searchpath']
-        self._templar.set_available_variables(temp_vars)
+        self._templar.available_variables = temp_vars
         resultant = self._templar.template(
             template_data,
             preserve_trailing_newlines=True,
@@ -627,9 +627,7 @@ class ActionModule(ActionBase):
         )
 
         # Access to protected method is unavoidable in Ansible
-        self._templar.set_available_variables(
-            self._templar._available_variables
-        )
+        self._templar.available_variables = self._templar._available_variables
 
         if _vars['config_overrides']:
             type_merger = getattr(self, CONFIG_TYPES.get(_vars['config_type']))
