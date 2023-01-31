@@ -10,7 +10,7 @@
 
 - name: set_fact _radosgw_address to radosgw_address_block ipv4
   set_fact:
-    _radosgw_address: "{{ hostvars[inventory_hostname]['ansible_facts']['all_ipv4_addresses'] | ips_in_ranges(hostvars[inventory_hostname]['radosgw_address_block'].split(',')) | first }}"
+    _radosgw_address: "{{ hostvars[inventory_hostname]['ansible_facts']['all_ipv4_addresses'] | ips_in_ranges(hostvars[inventory_hostname]['radosgw_address_block'].split(',')) }}"
   when:
     - radosgw_address_block is defined
     - radosgw_address_block != 'subnet'
@@ -18,7 +18,7 @@
 
 - name: set_fact _radosgw_address to radosgw_address_block ipv6
   set_fact:
-    _radosgw_address: "{{ hostvars[inventory_hostname]['ansible_facts']['all_ipv6_addresses'] | ips_in_ranges(hostvars[inventory_hostname]['radosgw_address_block'].split(',')) | last | ansible.utils.ipwrap }}"
+    _radosgw_address: "{{ hostvars[inventory_hostname]['ansible_facts']['all_ipv6_addresses'] | ips_in_ranges(hostvars[inventory_hostname]['radosgw_address_block'].split(',')) | ansible.utils.ipwrap }}"
   when:
     - radosgw_address_block is defined
     - radosgw_address_block != 'subnet'
@@ -26,7 +26,7 @@
 
 - name: set_fact _radosgw_address to radosgw_address
   set_fact:
-    _radosgw_address: "{{ radosgw_address | ansible.utils.ipwrap }}"
+    _radosgw_address: "{{ (radosgw_address if radosgw_address is sequence else [radosgw_address]) | ansible.utils.ipwrap }}"
   when:
     - radosgw_address is defined
     - radosgw_address != 'x.x.x.x'
@@ -47,7 +47,7 @@
 
     - name: set_fact _radosgw_address to radosgw_interface - ipv4
       set_fact:
-        _radosgw_address: "{{ hostvars[item]['ansible_facts'][hostvars[item]['_interface']][ip_version]['address'] }}"
+        _radosgw_address: "{{ [hostvars[item]['ansible_facts'][hostvars[item]['_interface']][ip_version]['address']] }}"
       loop: "{{ groups.get(rgw_group_name, []) }}"
       delegate_to: "{{ item }}"
       delegate_facts: true
@@ -56,7 +56,7 @@
 
     - name: set_fact _radosgw_address to radosgw_interface - ipv6
       set_fact:
-        _radosgw_address: "{{ hostvars[item]['ansible_facts'][hostvars[item]['_interface']][ip_version][0]['address'] | ansible.utils.ipwrap }}"
+        _radosgw_address: "{{ [hostvars[item]['ansible_facts'][hostvars[item]['_interface']][ip_version][0]['address'] | ansible.utils.ipwrap] }}"
       loop: "{{ groups.get(rgw_group_name, []) }}"
       delegate_to: "{{ item }}"
       delegate_facts: true
