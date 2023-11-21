@@ -379,7 +379,9 @@ def list_osd(module, container_image):
                     cluster,
                     mounts={'/var/lib/ceph': '/var/lib/ceph:ro'})
     if data:
-        cmd.append(data)
+        # Use the full path to the OSD until the following bug is patched:
+        # https://tracker.ceph.com/issues/62320
+        cmd.append('/dev/' + data)
     cmd.append('--format=json')
 
     return cmd
